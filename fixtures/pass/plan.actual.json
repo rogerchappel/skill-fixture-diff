@@ -1,0 +1,10 @@
+{
+  "status": "ready",
+  "approval": "required-before-external-write",
+  "steps": [
+    {
+      "name": "verify",
+      "sideEffect": "local-read"
+    }
+  ]
+}

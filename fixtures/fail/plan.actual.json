@@ -1,0 +1,11 @@
+{
+  "status": "ready",
+  "approval": "optional",
+  "steps": [
+    {
+      "name": "verify",
+      "sideEffect": "external-write"
+    }
+  ],
+  "notes": "new field"
+}

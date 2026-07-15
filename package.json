@@ -1,0 +1,35 @@
+{
+  "name": "skill-fixture-diff",
+  "version": "0.1.0",
+  "description": "Skill-aware fixture diff reports for agent skill regression checks.",
+  "type": "module",
+  "bin": {
+    "skill-fixture-diff": "./bin/skill-fixture-diff.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check bin/skill-fixture-diff.js && node --check src/index.js && node --check src/report.js",
+    "smoke": "node bin/skill-fixture-diff.js --fixtures fixtures/pass --format markdown",
+    "fixture:fail": "node bin/skill-fixture-diff.js --fixtures fixtures/fail --format json"
+  },
+  "keywords": [
+    "agent-skill",
+    "fixtures",
+    "regression",
+    "diff",
+    "cli"
+  ],
+  "author": "Roger Chappel",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "bin",
+    "src",
+    "docs",
+    "SKILL.md",
+    "README.md",
+    "LICENSE"
+  ]
+}

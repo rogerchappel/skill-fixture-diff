@@ -20,3 +20,9 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npm run smoke
+      - name: Smoke test packed artifact
+        run: |
+          package_tarball="$(npm pack --silent)"
+          mkdir package-smoke
+          tar -xzf "$package_tarball" -C package-smoke
+          npm --prefix package-smoke/package run smoke

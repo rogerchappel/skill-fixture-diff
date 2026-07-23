@@ -35,10 +35,12 @@ Options:
 
 ## What It Checks
 
+- Empty directories or directories with no discoverable fixture files.
 - Missing expected or actual fixture pairs.
 - Markdown heading drift for required sections.
 - Approval and side-effect boundary wording changes.
-- JSON type changes, missing keys, added keys, and value changes.
+- JSON type changes, missing keys, added keys, and value changes. Boundary keys
+  are matched consistently whether terms use spaces or hyphens.
 
 ## Limitations
 

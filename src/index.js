@@ -10,6 +10,16 @@ export async function compareFixtures(options) {
   const cases = await discoverCases(fixtureDir);
   const findings = [];
 
+  if (cases.length === 0) {
+    findings.push({
+      caseName: null,
+      file: null,
+      check: "fixture.empty",
+      severity: "fail",
+      message: "No discoverable fixture pairs found."
+    });
+  }
+
   for (const fixtureCase of cases) {
     if (!fixtureCase.expected || !fixtureCase.actual) {
       findings.push({
@@ -199,5 +209,10 @@ function isObject(value) {
 }
 
 function boundaryPath(pointer) {
-  return BOUNDARY_TERMS.some((term) => pointer.toLowerCase().includes(term.replace("-", "")));
+  const normalizedPointer = normalizeBoundaryTerm(pointer);
+  return BOUNDARY_TERMS.some((term) => normalizedPointer.includes(normalizeBoundaryTerm(term)));
+}
+
+function normalizeBoundaryTerm(value) {
+  return value.toLowerCase().replace(/[\s-]+/g, "");
 }

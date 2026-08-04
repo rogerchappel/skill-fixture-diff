@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -39,6 +39,75 @@ test("hyphenated boundary keys classify value drift as failures", () => {
   assert.equal(findings.length, 1);
   assert.equal(findings[0].check, "json.boundary_value");
   assert.equal(findings[0].severity, "fail");
+});
+
+test("boundary matching does not treat token substrings as boundaries", () => {
+  for (const key of ["sender", "writer", "rewrite"]) {
+    const findings = compareJsonFixture(
+      { caseName: key, fileStem: `${key}.json` },
+      JSON.stringify({ [key]: "before" }),
+      JSON.stringify({ [key]: "after" })
+    );
+
+    assert.equal(findings[0].check, "json.value");
+    assert.equal(findings[0].severity, "warn");
+  }
+});
+
+test("exact and multi-token boundary keys classify value drift as failures", () => {
+  for (const key of ["send", "side effect", "side-effect"]) {
+    const findings = compareJsonFixture(
+      { caseName: key, fileStem: `${key}.json` },
+      JSON.stringify({ [key]: "before" }),
+      JSON.stringify({ [key]: "after" })
+    );
+
+    assert.equal(findings[0].check, "json.boundary_value");
+    assert.equal(findings[0].severity, "fail");
+  }
+});
+
+test("array length drift fails when removed or added values contain boundary paths", () => {
+  const fixtureCase = { caseName: "nested", fileStem: "nested.json" };
+  const removed = compareJsonFixture(
+    fixtureCase,
+    JSON.stringify({ rules: [{ nested: { approval: "required" } }] }),
+    JSON.stringify({ rules: [] })
+  );
+  const added = compareJsonFixture(
+    fixtureCase,
+    JSON.stringify({ rules: [] }),
+    JSON.stringify({ rules: [[{ "side-effect": "publish" }]] })
+  );
+
+  assert.equal(removed[0].check, "json.array_length");
+  assert.equal(removed[0].severity, "fail");
+  assert.equal(added[0].severity, "fail");
+});
+
+test("array length drift under a boundary path fails while ordinary drift warns", () => {
+  const fixtureCase = { caseName: "arrays", fileStem: "arrays.json" };
+  const boundary = compareJsonFixture(fixtureCase, JSON.stringify({ approval: ["one"] }), JSON.stringify({ approval: [] }));
+  const ordinary = compareJsonFixture(fixtureCase, JSON.stringify({ names: ["one"] }), JSON.stringify({ names: [] }));
+
+  assert.equal(boundary[0].severity, "fail");
+  assert.equal(ordinary[0].severity, "warn");
+});
+
+test("markdown boundary matching ignores substrings but recognizes spaced and hyphenated terms", async (t) => {
+  const fixtureDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-boundaries-"));
+  t.after(() => rm(fixtureDir, { recursive: true, force: true }));
+
+  await Promise.all([
+    writeFile(path.join(fixtureDir, "words.expected.md"), "Rewrite the sender notes for the writer.\n"),
+    writeFile(path.join(fixtureDir, "words.actual.md"), "Rewrite the sender guide for the writer.\n"),
+    writeFile(path.join(fixtureDir, "boundary.expected.md"), "Keep side-effect approval.\n"),
+    writeFile(path.join(fixtureDir, "boundary.actual.md"), "Change side-effect approval.\n")
+  ]);
+
+  const report = await compareFixtures({ fixtureDir });
+  assert.ok(report.findings.some((finding) => finding.caseName === "words" && finding.check === "markdown.text"));
+  assert.ok(report.findings.some((finding) => finding.caseName === "boundary" && finding.check === "markdown.boundary_text"));
 });
 
 test("empty fixture directories produce an explicit failure", async (t) => {

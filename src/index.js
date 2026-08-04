@@ -1,8 +1,9 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const SEVERITY_ORDER = { pass: 0, warn: 1, fail: 2 };
-const BOUNDARY_TERMS = ["approval", "side effect", "side-effect", "external", "write", "send", "publish"];
+const BOUNDARY_TERMS = ["approval", "side effect", "external", "write", "send", "publish"];
+const BOUNDARY_TOKEN_SEQUENCES = BOUNDARY_TERMS.map((term) => boundaryTokens(term));
 
 export async function compareFixtures(options) {
   const fixtureDir = options.fixtureDir;
@@ -120,7 +121,13 @@ function compareJsonValue(expected, actual, pointer) {
       return [{ check: "json.type", severity: "fail", message: `${pointer} changed array type.` }];
     }
     if (expected.length !== actual.length) {
-      findings.push({ check: "json.array_length", severity: "warn", message: `${pointer} length changed from ${expected.length} to ${actual.length}.` });
+      const boundaryDrift =
+        boundaryPath(pointer) || [...expected, ...actual].some((value) => containsBoundaryPath(value));
+      findings.push({
+        check: "json.array_length",
+        severity: boundaryDrift ? "fail" : "warn",
+        message: `${pointer} length changed from ${expected.length} to ${actual.length}.`
+      });
     }
     expected.forEach((value, index) => {
       if (index < actual.length) findings.push(...compareJsonValue(value, actual[index], `${pointer}[${index}]`));
@@ -193,7 +200,7 @@ function boundaryLines(markdown) {
   return markdown
     .split(/\r?\n/)
     .map((line) => normalizeText(line.replace(/^[-*]\s+/, "")))
-    .filter((line) => BOUNDARY_TERMS.some((term) => line.includes(term)));
+    .filter((line) => containsBoundaryTerm(line));
 }
 
 function normalizeHeading(value) {
@@ -209,10 +216,22 @@ function isObject(value) {
 }
 
 function boundaryPath(pointer) {
-  const normalizedPointer = normalizeBoundaryTerm(pointer);
-  return BOUNDARY_TERMS.some((term) => normalizedPointer.includes(normalizeBoundaryTerm(term)));
+  return containsBoundaryTerm(pointer);
 }
 
-function normalizeBoundaryTerm(value) {
-  return value.toLowerCase().replace(/[\s-]+/g, "");
+function containsBoundaryPath(value) {
+  if (Array.isArray(value)) return value.some((item) => containsBoundaryPath(item));
+  if (!isObject(value)) return false;
+  return Object.entries(value).some(([key, nestedValue]) => boundaryPath(key) || containsBoundaryPath(nestedValue));
+}
+
+function containsBoundaryTerm(value) {
+  const tokens = boundaryTokens(value);
+  return BOUNDARY_TOKEN_SEQUENCES.some((termTokens) =>
+    tokens.some((_, index) => termTokens.every((token, offset) => tokens[index + offset] === token))
+  );
+}
+
+function boundaryTokens(value) {
+  return value.toLowerCase().match(/[a-z0-9]+/g) ?? [];
 }

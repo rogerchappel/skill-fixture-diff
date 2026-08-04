@@ -142,6 +142,38 @@ test("cli exits non-zero for fail fixtures", () => {
   assert.ok(parsed.summary.fail > 0);
 });
 
+test("cli --fail-on distinguishes ordinary substring warnings from boundary failures", async (t) => {
+  const ordinaryDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-ordinary-cli-"));
+  const boundaryDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-boundary-cli-"));
+  t.after(() => Promise.all([ordinaryDir, boundaryDir].map((dir) => rm(dir, { recursive: true, force: true }))));
+
+  await Promise.all([
+    writeFile(path.join(ordinaryDir, "case.expected.json"), JSON.stringify({ sender: "before" })),
+    writeFile(path.join(ordinaryDir, "case.actual.json"), JSON.stringify({ sender: "after" })),
+    writeFile(
+      path.join(boundaryDir, "case.expected.json"),
+      JSON.stringify({ rules: [{ nested: { approval: "required" } }] })
+    ),
+    writeFile(path.join(boundaryDir, "case.actual.json"), JSON.stringify({ rules: [] }))
+  ]);
+
+  const ordinaryDefault = spawnSync(process.execPath, ["bin/skill-fixture-diff.js", "--fixtures", ordinaryDir], {
+    encoding: "utf8"
+  });
+  const ordinaryWarn = spawnSync(
+    process.execPath,
+    ["bin/skill-fixture-diff.js", "--fixtures", ordinaryDir, "--fail-on", "warn"],
+    { encoding: "utf8" }
+  );
+  const boundaryDefault = spawnSync(process.execPath, ["bin/skill-fixture-diff.js", "--fixtures", boundaryDir], {
+    encoding: "utf8"
+  });
+
+  assert.equal(ordinaryDefault.status, 0);
+  assert.equal(ordinaryWarn.status, 1);
+  assert.equal(boundaryDefault.status, 1);
+});
+
 test("cli exits non-zero for empty fixture directories", async (t) => {
   const fixtureDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-empty-cli-"));
   t.after(() => rm(fixtureDir, { recursive: true, force: true }));

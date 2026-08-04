@@ -32,6 +32,16 @@ Options:
 - `--format markdown|json` controls output format.
 - `--fail-on warn|fail` chooses the minimum severity that exits non-zero.
 - `--require-section <name>` can be repeated for markdown section checks.
+- `--help`, `-h` prints usage information.
+
+Exit codes:
+
+- `0` means the comparison passed (or help was requested).
+- `1` means fixture findings met the configured `--fail-on` threshold.
+- `2` means the command could not run, including invalid CLI usage or fixture read errors.
+
+Invalid options, missing option values, and unsupported `--format` or `--fail-on`
+values print a concise diagnostic and usage text to standard error.
 
 ## What It Checks
 

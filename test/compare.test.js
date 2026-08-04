@@ -86,3 +86,35 @@ test("cli exits non-zero for empty fixture directories", async (t) => {
   assert.equal(parsed.summary.pass, 0);
   assert.equal(parsed.findings[0].check, "fixture.empty");
 });
+
+test("cli help exits zero and prints usage", () => {
+  const result = spawnSync(process.execPath, ["bin/skill-fixture-diff.js", "--help"], { encoding: "utf8" });
+
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /^Usage: skill-fixture-diff/);
+  assert.equal(result.stderr, "");
+});
+
+for (const testCase of [
+  { name: "an unknown option", args: ["--bogus"], diagnostic: "Unknown option: --bogus" },
+  { name: "a missing --fixtures value", args: ["--fixtures"], diagnostic: "--fixtures requires a value" },
+  { name: "a missing --format value", args: ["--format"], diagnostic: "--format requires a value" },
+  { name: "a missing --fail-on value", args: ["--fail-on"], diagnostic: "--fail-on requires a value" },
+  {
+    name: "a missing --require-section value",
+    args: ["--require-section"],
+    diagnostic: "--require-section requires a value"
+  },
+  { name: "an invalid --format value", args: ["--format", "xml"], diagnostic: "--format must be markdown or json" },
+  { name: "an invalid --fail-on value", args: ["--fail-on", "error"], diagnostic: "--fail-on must be warn or fail" }
+]) {
+  test(`cli reports ${testCase.name} as a usage error`, () => {
+    const result = spawnSync(process.execPath, ["bin/skill-fixture-diff.js", ...testCase.args], { encoding: "utf8" });
+
+    assert.equal(result.status, 2);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, new RegExp(`^skill-fixture-diff: ${testCase.diagnostic}`));
+    assert.match(result.stderr, /\nUsage: skill-fixture-diff/);
+    assert.doesNotMatch(result.stderr, /\n\s+at /);
+  });
+}

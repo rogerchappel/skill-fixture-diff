@@ -148,7 +148,13 @@ function compareJsonValue(expected, actual, pointer) {
     }
     for (const key of Object.keys(actual)) {
       if (!(key in expected)) {
-        findings.push({ check: "json.added_key", severity: "warn", message: `${pointer}.${key} was added.` });
+        const addedPointer = `${pointer}.${key}`;
+        const boundaryAddition = boundaryPath(addedPointer) || containsBoundaryPath(actual[key]);
+        findings.push({
+          check: "json.added_key",
+          severity: boundaryAddition ? "fail" : "warn",
+          message: `${addedPointer} was added.`
+        });
       }
     }
     return findings;

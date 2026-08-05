@@ -67,6 +67,25 @@ test("exact and multi-token boundary keys classify value drift as failures", () 
   }
 });
 
+test("added boundary keys and subtrees fail while ordinary additions warn", () => {
+  const fixtureCase = { caseName: "added", fileStem: "added.json" };
+  const cases = [
+    { actual: { approval: "required" }, severity: "fail" },
+    { actual: { policy: { send: "allowed" } }, severity: "fail" },
+    { actual: { "side effect": "publish" }, severity: "fail" },
+    { actual: { "side-effect": "publish" }, severity: "fail" },
+    { actual: { metadata: { label: "new" } }, severity: "warn" }
+  ];
+
+  for (const { actual, severity } of cases) {
+    const findings = compareJsonFixture(fixtureCase, "{}", JSON.stringify(actual));
+
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].check, "json.added_key");
+    assert.equal(findings[0].severity, severity);
+  }
+});
+
 test("array length drift fails when removed or added values contain boundary paths", () => {
   const fixtureCase = { caseName: "nested", fileStem: "nested.json" };
   const removed = compareJsonFixture(
@@ -155,6 +174,35 @@ test("cli --fail-on distinguishes ordinary substring warnings from boundary fail
       JSON.stringify({ rules: [{ nested: { approval: "required" } }] })
     ),
     writeFile(path.join(boundaryDir, "case.actual.json"), JSON.stringify({ rules: [] }))
+  ]);
+
+  const ordinaryDefault = spawnSync(process.execPath, ["bin/skill-fixture-diff.js", "--fixtures", ordinaryDir], {
+    encoding: "utf8"
+  });
+  const ordinaryWarn = spawnSync(
+    process.execPath,
+    ["bin/skill-fixture-diff.js", "--fixtures", ordinaryDir, "--fail-on", "warn"],
+    { encoding: "utf8" }
+  );
+  const boundaryDefault = spawnSync(process.execPath, ["bin/skill-fixture-diff.js", "--fixtures", boundaryDir], {
+    encoding: "utf8"
+  });
+
+  assert.equal(ordinaryDefault.status, 0);
+  assert.equal(ordinaryWarn.status, 1);
+  assert.equal(boundaryDefault.status, 1);
+});
+
+test("cli defaults fail for boundary additions and --fail-on warn catches ordinary additions", async (t) => {
+  const ordinaryDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-added-ordinary-cli-"));
+  const boundaryDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-added-boundary-cli-"));
+  t.after(() => Promise.all([ordinaryDir, boundaryDir].map((dir) => rm(dir, { recursive: true, force: true }))));
+
+  await Promise.all([
+    writeFile(path.join(ordinaryDir, "case.expected.json"), "{}"),
+    writeFile(path.join(ordinaryDir, "case.actual.json"), JSON.stringify({ metadata: { label: "new" } })),
+    writeFile(path.join(boundaryDir, "case.expected.json"), "{}"),
+    writeFile(path.join(boundaryDir, "case.actual.json"), JSON.stringify({ policy: { "side-effect": "publish" } }))
   ]);
 
   const ordinaryDefault = spawnSync(process.execPath, ["bin/skill-fixture-diff.js", "--fixtures", ordinaryDir], {

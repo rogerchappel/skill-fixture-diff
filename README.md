@@ -50,9 +50,11 @@ values print a concise diagnostic and usage text to standard error.
 - Markdown heading drift for required sections.
 - Approval and side-effect boundary wording changes, matched as whole words or
   hyphen/space-separated terms rather than substrings of ordinary words.
-- JSON type changes, missing keys, added keys, and value changes. Boundary keys
-  are matched consistently whether terms use spaces or hyphens, and array
-  length drift fails when the array path or its objects carry a boundary key.
+- JSON type changes, missing keys, added keys, and value changes. Added ordinary
+  keys warn, while a newly added boundary key or subtree containing one fails.
+  Boundary keys are matched consistently whether terms use spaces or hyphens,
+  and array length drift fails when the array path or its objects carry a
+  boundary key.
 
 ## Limitations
 

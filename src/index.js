@@ -86,11 +86,28 @@ export function compareMarkdownFixture(fixtureCase, expected, actual, requiredSe
   }
 
   const expectedBoundaryLines = boundaryLines(expected);
-  const actualBoundaryLines = new Set(boundaryLines(actual));
-  for (const line of expectedBoundaryLines) {
-    if (!actualBoundaryLines.has(line)) {
-      findings.push(finding(fixtureCase, "markdown.boundary_text", "fail", `Boundary or approval text changed: "${line}".`));
-    }
+  const actualBoundaryLines = boundaryLines(actual);
+  const expectedBoundarySet = new Set(expectedBoundaryLines);
+  const actualBoundarySet = new Set(actualBoundaryLines);
+  const removedBoundaryLines = expectedBoundaryLines.filter((line) => !actualBoundarySet.has(line));
+  const addedBoundaryLines = actualBoundaryLines.filter((line) => !expectedBoundarySet.has(line));
+  const changedBoundaryCount = Math.min(removedBoundaryLines.length, addedBoundaryLines.length);
+
+  for (let index = 0; index < changedBoundaryCount; index += 1) {
+    findings.push(
+      finding(
+        fixtureCase,
+        "markdown.boundary_text",
+        "fail",
+        `Boundary or approval text changed from "${removedBoundaryLines[index]}" to "${addedBoundaryLines[index]}".`
+      )
+    );
+  }
+  for (const line of removedBoundaryLines.slice(changedBoundaryCount)) {
+    findings.push(finding(fixtureCase, "markdown.boundary_text", "fail", `Boundary or approval text removed: "${line}".`));
+  }
+  for (const line of addedBoundaryLines.slice(changedBoundaryCount)) {
+    findings.push(finding(fixtureCase, "markdown.boundary_text", "fail", `Boundary or approval text added: "${line}".`));
   }
 
   if (findings.length === 0 && normalizeText(expected) !== normalizeText(actual)) {

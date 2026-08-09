@@ -48,8 +48,9 @@ values print a concise diagnostic and usage text to standard error.
 - Empty directories or directories with no discoverable fixture files.
 - Missing expected or actual fixture pairs.
 - Markdown heading drift for required sections.
-- Approval and side-effect boundary wording changes, matched as whole words or
-  hyphen/space-separated terms rather than substrings of ordinary words.
+- Added, removed, or changed approval and side-effect boundary wording, matched
+  as whole words or hyphen/space-separated terms rather than substrings of
+  ordinary words. These findings fail at the default threshold.
 - JSON type changes, missing keys, added keys, and value changes. Added ordinary
   keys warn, while a newly added boundary key or subtree containing one fails.
   Boundary keys are matched consistently whether terms use spaces or hyphens,

@@ -27,6 +27,11 @@ Ask for explicit approval before using any future mode that rewrites fixtures. N
 3. Review `fail` findings first, then `warn`.
 4. Include the report in the PR or handoff.
 
+Added, removed, and changed Markdown lines mentioning approval, external writes,
+sends, publishing, or side effects are `fail` findings. Ordinary words that only
+contain those tokens, such as `sender`, `writer`, and `rewrite`, are not treated
+as boundaries.
+
 ## Example
 
 ```bash

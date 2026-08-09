@@ -129,6 +129,45 @@ test("markdown boundary matching ignores substrings but recognizes spaced and hy
   assert.ok(report.findings.some((finding) => finding.caseName === "boundary" && finding.check === "markdown.boundary_text"));
 });
 
+test("added markdown boundary lines fail while ordinary token substrings only warn", async (t) => {
+  const fixtureDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-added-markdown-"));
+  t.after(() => rm(fixtureDir, { recursive: true, force: true }));
+
+  await Promise.all([
+    writeFile(path.join(fixtureDir, "case.expected.md"), "# Plan\n\nRoutine local operation.\n"),
+    writeFile(
+      path.join(fixtureDir, "case.actual.md"),
+      "# Plan\n\nRoutine local operation.\n\nExternal writes are allowed without approval.\n"
+    ),
+    writeFile(path.join(fixtureDir, "ordinary.expected.md"), "Update the sender notes.\n"),
+    writeFile(path.join(fixtureDir, "ordinary.actual.md"), "Update the writer notes.\n")
+  ]);
+
+  const report = await compareFixtures({ fixtureDir });
+  const added = report.findings.filter((finding) => finding.caseName === "case");
+  assert.equal(added.length, 1);
+  assert.equal(added[0].check, "markdown.boundary_text");
+  assert.equal(added[0].severity, "fail");
+  assert.match(added[0].message, /text added/);
+  assert.ok(report.findings.some((finding) => finding.caseName === "ordinary" && finding.check === "markdown.text"));
+});
+
+test("changed markdown boundary lines produce one failure", async (t) => {
+  const fixtureDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-changed-markdown-"));
+  t.after(() => rm(fixtureDir, { recursive: true, force: true }));
+
+  await Promise.all([
+    writeFile(path.join(fixtureDir, "case.expected.md"), "External writes require approval.\n"),
+    writeFile(path.join(fixtureDir, "case.actual.md"), "External writes need no approval.\n")
+  ]);
+
+  const report = await compareFixtures({ fixtureDir });
+  assert.equal(report.findings.length, 1);
+  assert.equal(report.findings[0].check, "markdown.boundary_text");
+  assert.equal(report.findings[0].severity, "fail");
+  assert.match(report.findings[0].message, /changed from/);
+});
+
 test("empty fixture directories produce an explicit failure", async (t) => {
   const fixtureDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-empty-"));
   t.after(() => rm(fixtureDir, { recursive: true, force: true }));
@@ -220,6 +259,32 @@ test("cli defaults fail for boundary additions and --fail-on warn catches ordina
   assert.equal(ordinaryDefault.status, 0);
   assert.equal(ordinaryWarn.status, 1);
   assert.equal(boundaryDefault.status, 1);
+});
+
+test("cli defaults fail for added and changed markdown boundary lines", async (t) => {
+  const addedDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-added-markdown-cli-"));
+  const changedDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-changed-markdown-cli-"));
+  t.after(() => Promise.all([addedDir, changedDir].map((dir) => rm(dir, { recursive: true, force: true }))));
+
+  await Promise.all([
+    writeFile(path.join(addedDir, "case.expected.md"), "Routine local operation.\n"),
+    writeFile(path.join(addedDir, "case.actual.md"), "Routine local operation.\nExternal writes are allowed.\n"),
+    writeFile(path.join(changedDir, "case.expected.md"), "Publishing requires approval.\n"),
+    writeFile(path.join(changedDir, "case.actual.md"), "Publishing needs no approval.\n")
+  ]);
+
+  for (const fixtureDir of [addedDir, changedDir]) {
+    const result = spawnSync(
+      process.execPath,
+      ["bin/skill-fixture-diff.js", "--fixtures", fixtureDir, "--format", "json"],
+      { encoding: "utf8" }
+    );
+
+    assert.equal(result.status, 1);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.findings.length, 1);
+    assert.equal(report.findings[0].check, "markdown.boundary_text");
+  }
 });
 
 test("cli exits non-zero for empty fixture directories", async (t) => {

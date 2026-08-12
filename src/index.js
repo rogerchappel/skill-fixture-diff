@@ -212,18 +212,41 @@ function finding(fixtureCase, check, severity, message) {
 
 function headingSet(markdown) {
   return new Set(
-    markdown
-      .split(/\r?\n/)
+    markdownLinesOutsideFences(markdown)
       .filter((line) => /^#{1,6}\s+/.test(line))
       .map((line) => normalizeHeading(line.replace(/^#{1,6}\s+/, "")))
   );
 }
 
 function boundaryLines(markdown) {
-  return markdown
-    .split(/\r?\n/)
+  return markdownLinesOutsideFences(markdown)
     .map((line) => normalizeText(line.replace(/^[-*]\s+/, "")))
     .filter((line) => containsBoundaryTerm(line));
+}
+
+function markdownLinesOutsideFences(markdown) {
+  const lines = [];
+  let fence;
+
+  for (const line of markdown.split(/\r?\n/)) {
+    if (fence) {
+      const closingFence = line.match(/^ {0,3}(`+|~+)\s*$/);
+      if (closingFence && closingFence[1][0] === fence.marker && closingFence[1].length >= fence.length) {
+        fence = undefined;
+      }
+      continue;
+    }
+
+    const openingFence = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (openingFence) {
+      fence = { marker: openingFence[1][0], length: openingFence[1].length };
+      continue;
+    }
+
+    lines.push(line);
+  }
+
+  return lines;
 }
 
 function normalizeHeading(value) {

@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { compareFixtures, compareJsonFixture, shouldFail } from "../src/index.js";
+import { compareFixtures, compareJsonFixture, compareMarkdownFixture, shouldFail } from "../src/index.js";
 
 test("passing fixtures produce a pass summary", async () => {
   const report = await compareFixtures({
@@ -27,6 +27,61 @@ test("failing fixtures classify boundary drift as failures", async () => {
   assert.equal(shouldFail(report), true);
   assert.ok(report.findings.some((finding) => finding.check === "markdown.required_section"));
   assert.ok(report.findings.some((finding) => finding.check === "json.boundary_value"));
+});
+
+test("markdown semantic checks ignore headings and boundary text in fenced code", () => {
+  const expected = [
+    "# Stable heading",
+    "```markdown",
+    "## Example heading",
+    "Approval is required before publish.",
+    "```",
+    "~~~md title=example",
+    "### Tilde example",
+    "External writes require approval.",
+    "~~~"
+  ].join("\n");
+  const actual = [
+    "# Stable heading",
+    "```markdown",
+    "## Renamed example",
+    "Publishing is automatic.",
+    "```",
+    "~~~md title=example",
+    "### Renamed tilde example",
+    "Writes happen internally.",
+    "~~~"
+  ].join("\n");
+
+  const findings = compareMarkdownFixture({ caseName: "fences", fileStem: "fences.md" }, expected, actual);
+
+  assert.equal(findings.some((finding) => finding.check === "markdown.heading"), false);
+  assert.equal(findings.some((finding) => finding.check === "markdown.boundary_text"), false);
+  assert.ok(findings.some((finding) => finding.check === "markdown.text"));
+});
+
+test("markdown semantic checks still detect unfenced content mixed with fences", () => {
+  const expected = [
+    "## Public contract",
+    "Approval is required before publish.",
+    "```text",
+    "## Example heading",
+    "External writes require approval.",
+    "```"
+  ].join("\n");
+  const actual = [
+    "## Renamed contract",
+    "Publishing is automatic.",
+    "```text",
+    "## Renamed example",
+    "Writes happen internally.",
+    "```"
+  ].join("\n");
+
+  const findings = compareMarkdownFixture({ caseName: "mixed", fileStem: "mixed.md" }, expected, actual);
+
+  assert.ok(findings.some((finding) => finding.check === "markdown.heading"));
+  assert.ok(findings.some((finding) => finding.check === "markdown.boundary_text"));
 });
 
 test("hyphenated boundary keys classify value drift as failures", () => {

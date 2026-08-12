@@ -50,7 +50,10 @@ values print a concise diagnostic and usage text to standard error.
 - Markdown heading drift for required sections.
 - Added, removed, or changed approval and side-effect boundary wording, matched
   as whole words or hyphen/space-separated terms rather than substrings of
-  ordinary words. These findings fail at the default threshold.
+  ordinary words. These findings fail at the default threshold. Headings and
+  boundary-like prose inside backtick or tilde fenced code blocks are treated
+  as examples and excluded from these semantic checks, including fences with
+  info strings.
 - JSON type changes, missing keys, added keys, and value changes. Added ordinary
   keys warn, while a newly added boundary key or subtree containing one fails.
   Boundary keys are matched consistently whether terms use spaces or hyphens,
@@ -62,6 +65,10 @@ values print a concise diagnostic and usage text to standard error.
 - The comparator is intentionally conservative and deterministic.
 - It does not call models, fetch remote data, or update fixture snapshots.
 - Semantic equivalence is limited to structural checks and normalized text.
+- Fenced-code recognition follows standard Markdown fence shape (at least three
+  matching backticks or tildes, with up to three leading spaces); it is not a
+  complete CommonMark parser. Changes inside fences can still produce the
+  general normalized-text warning.
 
 ## Safety Notes
 

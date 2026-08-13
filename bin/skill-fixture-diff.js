@@ -39,13 +39,14 @@ function parseArgs(argv) {
     failOn: "fail",
     requireSection: []
   };
+  const seenSingletons = new Set();
 
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (token === "--help" || token === "-h") parsed.help = true;
-    else if (token === "--fixtures") parsed.fixtures = readOptionValue(argv, ++index, token);
-    else if (token === "--format") parsed.format = readOptionValue(argv, ++index, token);
-    else if (token === "--fail-on") parsed.failOn = readOptionValue(argv, ++index, token);
+    else if (token === "--fixtures") parsed.fixtures = readSingletonValue(argv, ++index, token, seenSingletons);
+    else if (token === "--format") parsed.format = readSingletonValue(argv, ++index, token, seenSingletons);
+    else if (token === "--fail-on") parsed.failOn = readSingletonValue(argv, ++index, token, seenSingletons);
     else if (token === "--require-section") parsed.requireSection.push(readOptionValue(argv, ++index, token));
     else throw new Error(`Unknown option: ${token}`);
   }
@@ -58,6 +59,14 @@ function parseArgs(argv) {
   }
 
   return parsed;
+}
+
+function readSingletonValue(argv, index, option, seenSingletons) {
+  if (seenSingletons.has(option)) {
+    throw new Error(`${option} may only be specified once`);
+  }
+  seenSingletons.add(option);
+  return readOptionValue(argv, index, option);
 }
 
 function readOptionValue(argv, index, option) {

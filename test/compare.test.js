@@ -364,6 +364,58 @@ test("cli help exits zero and prints usage", () => {
   assert.equal(result.stderr, "");
 });
 
+test("cli rejects duplicate --fixtures before comparing either directory", () => {
+  const result = spawnSync(
+    process.execPath,
+    ["bin/skill-fixture-diff.js", "--fixtures", "fixtures/fail", "--fixtures", "fixtures/pass"],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(result.status, 2);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /^skill-fixture-diff: --fixtures may only be specified once\n/);
+  assert.match(result.stderr, /\nUsage: skill-fixture-diff/);
+  assert.doesNotMatch(result.stderr, /Summary:/);
+});
+
+for (const option of ["--format", "--fail-on"]) {
+  test(`cli rejects duplicate ${option}`, () => {
+    const values = option === "--format" ? ["markdown", "json"] : ["fail", "warn"];
+    const result = spawnSync(
+      process.execPath,
+      ["bin/skill-fixture-diff.js", "--fixtures", "fixtures/pass", option, ...values.flatMap((value, index) =>
+        index === 0 ? [value, option] : [value]
+      )],
+      { encoding: "utf8" }
+    );
+
+    assert.equal(result.status, 2);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, new RegExp(`^skill-fixture-diff: ${option} may only be specified once\\n`));
+    assert.match(result.stderr, /\nUsage: skill-fixture-diff/);
+  });
+}
+
+test("cli accepts repeated --require-section options", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "bin/skill-fixture-diff.js",
+      "--fixtures",
+      "fixtures/pass",
+      "--require-section",
+      "Safety Notes",
+      "--require-section",
+      "Safety Notes"
+    ],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(result.status, 0);
+  assert.equal(result.stderr, "");
+  assert.match(result.stdout, /No drift found/);
+});
+
 for (const testCase of [
   { name: "an unknown option", args: ["--bogus"], diagnostic: "Unknown option: --bogus" },
   { name: "a missing --fixtures value", args: ["--fixtures"], diagnostic: "--fixtures requires a value" },

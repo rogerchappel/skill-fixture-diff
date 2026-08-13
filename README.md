@@ -28,9 +28,10 @@ skill-fixture-diff --fixtures fixtures/fail --format json --fail-on warn
 
 Options:
 
-- `--fixtures <dir>` reads all paired fixtures from a directory.
-- `--format markdown|json` controls output format.
-- `--fail-on warn|fail` chooses the minimum severity that exits non-zero.
+- `--fixtures <dir>` reads all paired fixtures from a directory (single-use).
+- `--format markdown|json` controls output format (single-use).
+- `--fail-on warn|fail` chooses the minimum severity that exits non-zero
+  (single-use).
 - `--require-section <name>` can be repeated for markdown section checks.
 - `--help`, `-h` prints usage information.
 
@@ -40,8 +41,9 @@ Exit codes:
 - `1` means fixture findings met the configured `--fail-on` threshold.
 - `2` means the command could not run, including invalid CLI usage or fixture read errors.
 
-Invalid options, missing option values, and unsupported `--format` or `--fail-on`
-values print a concise diagnostic and usage text to standard error.
+Invalid options, duplicate single-use options, missing option values, and
+unsupported `--format` or `--fail-on` values print a concise diagnostic and
+usage text to standard error.
 
 ## What It Checks
 

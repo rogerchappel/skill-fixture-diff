@@ -87,10 +87,8 @@ export function compareMarkdownFixture(fixtureCase, expected, actual, requiredSe
 
   const expectedBoundaryLines = boundaryLines(expected);
   const actualBoundaryLines = boundaryLines(actual);
-  const expectedBoundarySet = new Set(expectedBoundaryLines);
-  const actualBoundarySet = new Set(actualBoundaryLines);
-  const removedBoundaryLines = expectedBoundaryLines.filter((line) => !actualBoundarySet.has(line));
-  const addedBoundaryLines = actualBoundaryLines.filter((line) => !expectedBoundarySet.has(line));
+  const removedBoundaryLines = unmatchedOccurrences(expectedBoundaryLines, actualBoundaryLines);
+  const addedBoundaryLines = unmatchedOccurrences(actualBoundaryLines, expectedBoundaryLines);
   const changedBoundaryCount = Math.min(removedBoundaryLines.length, addedBoundaryLines.length);
 
   for (let index = 0; index < changedBoundaryCount; index += 1) {
@@ -222,6 +220,20 @@ function boundaryLines(markdown) {
   return markdownLinesOutsideFences(markdown)
     .map((line) => normalizeText(line.replace(/^[-*]\s+/, "")))
     .filter((line) => containsBoundaryTerm(line));
+}
+
+function unmatchedOccurrences(lines, comparisonLines) {
+  const remainingCounts = new Map();
+  for (const line of comparisonLines) {
+    remainingCounts.set(line, (remainingCounts.get(line) ?? 0) + 1);
+  }
+
+  return lines.filter((line) => {
+    const remaining = remainingCounts.get(line) ?? 0;
+    if (remaining === 0) return true;
+    remainingCounts.set(line, remaining - 1);
+    return false;
+  });
 }
 
 function markdownLinesOutsideFences(markdown) {

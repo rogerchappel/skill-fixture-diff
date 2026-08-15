@@ -223,6 +223,23 @@ test("changed markdown boundary lines produce one failure", async (t) => {
   assert.match(report.findings[0].message, /changed from/);
 });
 
+test("repeated markdown boundary lines retain occurrence counts", () => {
+  const fixtureCase = { caseName: "repeated", fileStem: "repeated.md" };
+  const boundaryLine = "External writes require approval.";
+
+  const removed = compareMarkdownFixture(fixtureCase, `${boundaryLine}\n${boundaryLine}\n`, `${boundaryLine}\n`);
+  const added = compareMarkdownFixture(fixtureCase, `${boundaryLine}\n`, `${boundaryLine}\n${boundaryLine}\n`);
+
+  assert.equal(removed.length, 1);
+  assert.equal(removed[0].check, "markdown.boundary_text");
+  assert.equal(removed[0].severity, "fail");
+  assert.match(removed[0].message, /text removed/);
+  assert.equal(added.length, 1);
+  assert.equal(added[0].check, "markdown.boundary_text");
+  assert.equal(added[0].severity, "fail");
+  assert.match(added[0].message, /text added/);
+});
+
 test("empty fixture directories produce an explicit failure", async (t) => {
   const fixtureDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-empty-"));
   t.after(() => rm(fixtureDir, { recursive: true, force: true }));
@@ -338,6 +355,33 @@ test("cli defaults fail for added and changed markdown boundary lines", async (t
     assert.equal(result.status, 1);
     const report = JSON.parse(result.stdout);
     assert.equal(report.findings.length, 1);
+    assert.equal(report.findings[0].check, "markdown.boundary_text");
+  }
+});
+
+test("cli defaults fail when a repeated markdown boundary line is added or removed", async (t) => {
+  const removedDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-repeated-removed-cli-"));
+  const addedDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-repeated-added-cli-"));
+  t.after(() => Promise.all([removedDir, addedDir].map((dir) => rm(dir, { recursive: true, force: true }))));
+  const boundaryLine = "External writes require approval.\n";
+
+  await Promise.all([
+    writeFile(path.join(removedDir, "case.expected.md"), boundaryLine.repeat(2)),
+    writeFile(path.join(removedDir, "case.actual.md"), boundaryLine),
+    writeFile(path.join(addedDir, "case.expected.md"), boundaryLine),
+    writeFile(path.join(addedDir, "case.actual.md"), boundaryLine.repeat(2))
+  ]);
+
+  for (const fixtureDir of [removedDir, addedDir]) {
+    const result = spawnSync(
+      process.execPath,
+      ["bin/skill-fixture-diff.js", "--fixtures", fixtureDir, "--format", "json"],
+      { encoding: "utf8" }
+    );
+
+    assert.equal(result.status, 1);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.summary.fail, 1);
     assert.equal(report.findings[0].check, "markdown.boundary_text");
   }
 });

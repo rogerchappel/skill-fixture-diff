@@ -84,6 +84,42 @@ test("markdown semantic checks still detect unfenced content mixed with fences",
   assert.ok(findings.some((finding) => finding.check === "markdown.boundary_text"));
 });
 
+test("boundary-named headings warn for heading drift without failing boundary checks", () => {
+  const fixtureCase = { caseName: "heading-boundary", fileStem: "heading-boundary.md" };
+  const findings = compareMarkdownFixture(fixtureCase, "# Approval\n", "# Approvals\n");
+
+  assert.equal(findings.some((finding) => finding.check === "markdown.heading"), true);
+  assert.equal(findings.some((finding) => finding.check === "markdown.boundary_text"), false);
+  assert.equal(findings.every((finding) => finding.severity === "warn"), true);
+});
+
+test("valid ATX closing hashes are ignored for heading and required-section matching", () => {
+  const fixtureCase = { caseName: "closing-hashes", fileStem: "closing-hashes.md" };
+  const findings = compareMarkdownFixture(
+    fixtureCase,
+    "# Outcome #\n\nExternal writes require approval.\n",
+    "# Outcome ###\n\nExternal writes require approval.\n",
+    ["Outcome"]
+  );
+
+  assert.equal(findings.some((finding) => finding.check === "markdown.required_section"), false);
+  assert.equal(findings.some((finding) => finding.check === "markdown.heading"), false);
+  assert.equal(findings.some((finding) => finding.check === "markdown.boundary_text"), false);
+});
+
+test("body boundary changes still fail beneath boundary-named headings", () => {
+  const fixtureCase = { caseName: "body-boundary", fileStem: "body-boundary.md" };
+  const findings = compareMarkdownFixture(
+    fixtureCase,
+    "## Approval ##\n\nExternal writes require approval.\n",
+    "## Approval\n\nExternal writes need no approval.\n"
+  );
+
+  assert.equal(findings.some((finding) => finding.check === "markdown.heading"), false);
+  assert.equal(findings.filter((finding) => finding.check === "markdown.boundary_text").length, 1);
+  assert.equal(findings.find((finding) => finding.check === "markdown.boundary_text").severity, "fail");
+});
+
 test("hyphenated boundary keys classify value drift as failures", () => {
   const findings = compareJsonFixture(
     { caseName: "hyphenated", fileStem: "hyphenated.json" },

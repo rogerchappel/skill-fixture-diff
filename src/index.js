@@ -211,15 +211,23 @@ function finding(fixtureCase, check, severity, message) {
 function headingSet(markdown) {
   return new Set(
     markdownLinesOutsideFences(markdown)
-      .filter((line) => /^#{1,6}\s+/.test(line))
-      .map((line) => normalizeHeading(line.replace(/^#{1,6}\s+/, "")))
+      .map((line) => atxHeading(line))
+      .filter((heading) => heading !== undefined)
+      .map((heading) => normalizeHeading(heading))
   );
 }
 
 function boundaryLines(markdown) {
   return markdownLinesOutsideFences(markdown)
+    .filter((line) => atxHeading(line) === undefined)
     .map((line) => normalizeText(line.replace(/^[-*]\s+/, "")))
     .filter((line) => containsBoundaryTerm(line));
+}
+
+function atxHeading(line) {
+  const match = line.match(/^ {0,3}#{1,6}(?:[ \t]+|$)(.*)$/);
+  if (!match) return undefined;
+  return match[1].replace(/[ \t]+#+[ \t]*$/, "");
 }
 
 function unmatchedOccurrences(lines, comparisonLines) {

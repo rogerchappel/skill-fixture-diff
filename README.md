@@ -54,7 +54,7 @@ usage text to standard error.
   as whole words or hyphen/space-separated terms rather than substrings of
   ordinary words. Repeated boundary lines are compared by occurrence count, so
   adding or removing one copy is still reported. These findings fail at the
-  default threshold. Headings and
+  default threshold. ATX headings (including valid optional closing hashes) and
   boundary-like prose inside backtick or tilde fenced code blocks are treated
   as examples and excluded from these semantic checks, including fences with
   info strings.

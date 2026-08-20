@@ -69,10 +69,11 @@ usage text to standard error.
 - The comparator is intentionally conservative and deterministic.
 - It does not call models, fetch remote data, or update fixture snapshots.
 - Semantic equivalence is limited to structural checks and normalized text.
-- Fenced-code recognition follows standard Markdown fence shape (at least three
-  matching backticks or tildes, with up to three leading spaces); it is not a
-  complete CommonMark parser. Changes inside fences can still produce the
-  general normalized-text warning.
+- Fenced-code recognition follows the CommonMark fence shape: at least three
+  matching backticks or tildes with up to three leading spaces. Backtick-fence
+  info strings cannot contain backticks; tilde-fence info strings may. This is
+  not a complete CommonMark parser. Changes inside valid fences can still
+  produce the general normalized-text warning.
 
 ## Safety Notes
 

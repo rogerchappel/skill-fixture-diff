@@ -60,6 +60,15 @@ test("markdown semantic checks ignore headings and boundary text in fenced code"
   assert.ok(findings.some((finding) => finding.check === "markdown.text"));
 });
 
+test("backtick info strings containing backticks do not open fenced code", () => {
+  const expected = ["```bad`", "External writes require approval."].join("\n");
+  const actual = ["```bad`", "External writes need no approval."].join("\n");
+
+  const findings = compareMarkdownFixture({ caseName: "invalid-fence", fileStem: "invalid-fence.md" }, expected, actual);
+
+  assert.ok(findings.some((finding) => finding.check === "markdown.boundary_text"));
+});
+
 test("markdown semantic checks still detect unfenced content mixed with fences", () => {
   const expected = [
     "## Public contract",
@@ -338,6 +347,25 @@ test("cli --fail-on distinguishes ordinary substring warnings from boundary fail
   assert.equal(ordinaryDefault.status, 0);
   assert.equal(ordinaryWarn.status, 1);
   assert.equal(boundaryDefault.status, 1);
+});
+
+test("cli fails when an invalid backtick fence precedes boundary drift", async (t) => {
+  const fixtureDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-invalid-fence-cli-"));
+  t.after(() => rm(fixtureDir, { recursive: true, force: true }));
+
+  await Promise.all([
+    writeFile(path.join(fixtureDir, "case.expected.md"), "```bad`\nExternal writes require approval.\n"),
+    writeFile(path.join(fixtureDir, "case.actual.md"), "```bad`\nExternal writes need no approval.\n")
+  ]);
+
+  const result = spawnSync(
+    process.execPath,
+    ["bin/skill-fixture-diff.js", "--fixtures", fixtureDir, "--format", "json"],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(result.status, 1);
+  assert.ok(JSON.parse(result.stdout).findings.some((finding) => finding.check === "markdown.boundary_text"));
 });
 
 test("cli defaults fail for boundary additions and --fail-on warn catches ordinary additions", async (t) => {

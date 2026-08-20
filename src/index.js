@@ -258,7 +258,7 @@ function markdownLinesOutsideFences(markdown) {
     }
 
     const openingFence = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
-    if (openingFence) {
+    if (openingFence && !(openingFence[1][0] === "`" && openingFence[2].includes("`"))) {
       fence = { marker: openingFence[1][0], length: openingFence[1].length };
       continue;
     }

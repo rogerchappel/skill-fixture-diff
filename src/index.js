@@ -248,7 +248,7 @@ function markdownLinesOutsideFences(markdown) {
   const lines = [];
   let fence;
 
-  for (const line of markdown.split(/\r?\n/)) {
+  for (const line of markdown.split(/\r\n|\n|\r/)) {
     if (fence) {
       const closingFence = line.match(/^ {0,3}(`+|~+)\s*$/);
       if (closingFence && closingFence[1][0] === fence.marker && closingFence[1].length >= fence.length) {

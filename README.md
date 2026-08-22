@@ -50,6 +50,7 @@ usage text to standard error.
 - Empty directories or directories with no discoverable fixture files.
 - Missing expected or actual fixture pairs.
 - Markdown heading drift for required sections.
+- LF, CRLF, and CR line endings are supported in Markdown fixtures.
 - Added, removed, or changed approval and side-effect boundary wording, matched
   as whole words or hyphen/space-separated terms rather than substrings of
   ordinary words. Repeated boundary lines are compared by occurrence count, so

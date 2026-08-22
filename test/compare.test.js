@@ -60,6 +60,63 @@ test("markdown semantic checks ignore headings and boundary text in fenced code"
   assert.ok(findings.some((finding) => finding.check === "markdown.text"));
 });
 
+test("markdown semantic checks support LF, CRLF, and CR line endings", () => {
+  const fixtureCase = { caseName: "line-endings", fileStem: "line-endings.md" };
+  const lines = [
+    "# Plan",
+    "External writes require approval.",
+    "```markdown",
+    "## Example heading",
+    "Publishing is automatic.",
+    "```"
+  ];
+
+  for (const lineEnding of ["\n", "\r\n", "\r"]) {
+    const markdown = lines.join(lineEnding);
+    const findings = compareMarkdownFixture(fixtureCase, markdown, markdown, ["Plan"]);
+
+    assert.equal(findings.length, 0);
+  }
+});
+
+test("heading, boundary, and fence drift detection is identical across line endings", () => {
+  const fixtureCase = { caseName: "line-ending-drift", fileStem: "line-ending-drift.md" };
+  const expectedLines = [
+    "# Plan",
+    "External writes require approval.",
+    "```markdown",
+    "## Ignored example",
+    "Publishing is automatic.",
+    "```"
+  ];
+  const actualLines = [
+    "# Result",
+    "External writes need no approval.",
+    "```markdown",
+    "## Changed ignored example",
+    "Publishing needs approval.",
+    "```"
+  ];
+
+  for (const lineEnding of ["\n", "\r\n", "\r"]) {
+    const findings = compareMarkdownFixture(
+      fixtureCase,
+      expectedLines.join(lineEnding),
+      actualLines.join(lineEnding),
+      ["Plan"]
+    );
+
+    assert.deepEqual(
+      findings.map(({ check, severity }) => ({ check, severity })),
+      [
+        { check: "markdown.required_section", severity: "fail" },
+        { check: "markdown.heading", severity: "warn" },
+        { check: "markdown.boundary_text", severity: "fail" }
+      ]
+    );
+  }
+});
+
 test("backtick info strings containing backticks do not open fenced code", () => {
   const expected = ["```bad`", "External writes require approval."].join("\n");
   const actual = ["```bad`", "External writes need no approval."].join("\n");

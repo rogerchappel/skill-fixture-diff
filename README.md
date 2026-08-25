@@ -61,6 +61,8 @@ usage text to standard error.
   info strings.
 - JSON type changes, missing keys, added keys, and value changes. Added ordinary
   keys warn, while a newly added boundary key or subtree containing one fails.
+  Every JSON object key is compared as data, including names such as `toString`,
+  `constructor`, and `__proto__` that also appear on JavaScript prototypes.
   Boundary keys are matched consistently whether terms use spaces or hyphens,
   and array length drift fails when the array path or its objects carry a
   boundary key.

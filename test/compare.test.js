@@ -243,6 +243,39 @@ test("added boundary keys and subtrees fail while ordinary additions warn", () =
   }
 });
 
+test("prototype-named JSON keys use own-property membership", () => {
+  const fixtureCase = { caseName: "prototype-keys", fileStem: "prototype-keys.json" };
+  const cases = [
+    {
+      expected: { toString: "before" },
+      actual: {},
+      check: "json.missing_key",
+      severity: "fail",
+      message: "$.toString is missing."
+    },
+    {
+      expected: {},
+      actual: { constructor: "after" },
+      check: "json.added_key",
+      severity: "warn",
+      message: "$.constructor was added."
+    },
+    {
+      expected: { ["__proto__"]: "before" },
+      actual: { ["__proto__"]: "after" },
+      check: "json.value",
+      severity: "warn",
+      message: '$.__proto__ changed from "before" to "after".'
+    }
+  ];
+
+  for (const { expected, actual, check, severity, message } of cases) {
+    const findings = compareJsonFixture(fixtureCase, JSON.stringify(expected), JSON.stringify(actual));
+
+    assert.deepEqual(findings, [{ caseName: fixtureCase.caseName, file: fixtureCase.fileStem, check, severity, message }]);
+  }
+});
+
 test("array length drift fails when removed or added values contain boundary paths", () => {
   const fixtureCase = { caseName: "nested", fileStem: "nested.json" };
   const removed = compareJsonFixture(

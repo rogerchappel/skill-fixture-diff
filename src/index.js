@@ -155,14 +155,14 @@ function compareJsonValue(expected, actual, pointer) {
       return [{ check: "json.type", severity: "fail", message: `${pointer} changed object type.` }];
     }
     for (const key of Object.keys(expected)) {
-      if (!(key in actual)) {
+      if (!Object.hasOwn(actual, key)) {
         findings.push({ check: "json.missing_key", severity: "fail", message: `${pointer}.${key} is missing.` });
       } else {
         findings.push(...compareJsonValue(expected[key], actual[key], `${pointer}.${key}`));
       }
     }
     for (const key of Object.keys(actual)) {
-      if (!(key in expected)) {
+      if (!Object.hasOwn(expected, key)) {
         const addedPointer = `${pointer}.${key}`;
         const boundaryAddition = boundaryPath(addedPointer) || containsBoundaryPath(actual[key]);
         findings.push({

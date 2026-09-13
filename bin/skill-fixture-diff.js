@@ -30,7 +30,7 @@ try {
   process.exitCode = shouldFail(report, args.failOn) ? 1 : 0;
 } catch (error) {
   process.stderr.write(`skill-fixture-diff: ${error.message}\n`);
-  process.exitCode = 2;
+  process.exit(1);
 }
 
 function parseArgs(argv) {

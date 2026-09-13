@@ -614,6 +614,17 @@ test("cli accepts repeated --require-section options", () => {
   assert.match(result.stdout, /No drift found/);
 });
 
+test("cli exits one for runtime errors such as nonexistent fixture directory", () => {
+  const result = spawnSync(
+    process.execPath,
+    ["bin/skill-fixture-diff.js", "--fixtures", "does-not-exist", "--format", "json"],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(result.status, 1);
+  assert.doesNotMatch(result.stderr, /Unknown option|requires a value|must be|may only be specified once/);
+});
+
 for (const testCase of [
   { name: "an unknown option", args: ["--bogus"], diagnostic: "Unknown option: --bogus" },
   { name: "a missing --fixtures value", args: ["--fixtures"], diagnostic: "--fixtures requires a value" },

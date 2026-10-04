@@ -388,6 +388,60 @@ test("empty fixture directories produce an explicit failure", async (t) => {
   assert.equal(shouldFail(report), true);
 });
 
+test("malformed JSON fixtures become a structured failure instead of aborting", async (t) => {
+  const fixtureDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-invalid-json-"));
+  t.after(() => rm(fixtureDir, { recursive: true, force: true }));
+  await Promise.all([
+    writeFile(path.join(fixtureDir, "case.expected.json"), "{ invalid"),
+    writeFile(path.join(fixtureDir, "case.actual.json"), "{}")
+  ]);
+
+  const report = await compareFixtures({ fixtureDir });
+
+  assert.equal(report.summary.pass, 0);
+  assert.equal(report.summary.fail, 1);
+  assert.equal(report.findings.length, 1);
+  assert.equal(report.findings[0].check, "json.parse");
+  assert.equal(report.findings[0].severity, "fail");
+});
+
+test("malformed Markdown fixture input remains a comparable text report", async (t) => {
+  const fixtureDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-invalid-markdown-"));
+  t.after(() => rm(fixtureDir, { recursive: true, force: true }));
+  await Promise.all([
+    writeFile(path.join(fixtureDir, "case.expected.md"), "# Expected\n"),
+    writeFile(path.join(fixtureDir, "case.actual.md"), "# Actual\n")
+  ]);
+
+  const report = await compareFixtures({ fixtureDir });
+
+  assert.equal(report.summary.pass, 0);
+  assert.equal(report.summary.warn, 1);
+  assert.equal(report.findings[0].check, "markdown.heading");
+  assert.equal(report.findings[0].severity, "warn");
+});
+
+test("cli reports malformed JSON fixtures as findings with exit status one", async (t) => {
+  const fixtureDir = await mkdtemp(path.join(tmpdir(), "skill-fixture-diff-invalid-json-cli-"));
+  t.after(() => rm(fixtureDir, { recursive: true, force: true }));
+  await Promise.all([
+    writeFile(path.join(fixtureDir, "case.expected.json"), "{ invalid"),
+    writeFile(path.join(fixtureDir, "case.actual.json"), "{}")
+  ]);
+
+  const result = spawnSync(
+    process.execPath,
+    ["bin/skill-fixture-diff.js", "--fixtures", fixtureDir, "--format", "json"],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(result.status, 1);
+  assert.equal(result.stderr, "");
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.summary.fail, 1);
+  assert.equal(report.findings[0].check, "json.parse");
+});
+
 test("cli exits zero for pass fixtures", () => {
   const result = spawnSync(process.execPath, ["bin/skill-fixture-diff.js", "--fixtures", "fixtures/pass"], {
     encoding: "utf8"
